@@ -3,7 +3,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Heart, X, HeartHandshake, RotateCcw } from "lucide-react";
 import Profile from "../components/Profile";
 
-const API_URL =import.meta.env.VITE_API_URL || "http://localhost:5000/api/profiles";
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api/profiles";
 
 function Discover() {
   const [profiles, setProfiles] = useState([]);
@@ -20,7 +21,7 @@ function Discover() {
   const feedbackTimer = useRef(null);
   const submittingRef = useRef(false);
 
-  // Fetch profiles from MongoDB through the backend API
+  // Fetch profiles from backend
   const fetchProfiles = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -71,12 +72,17 @@ function Discover() {
   };
 
   // Send swipe action to backend
-  const submitSwipe = async (action) => {
+  const submitSwipe = async (action, feedbackType = action) => {
     if (!currentProfile || submittingRef.current) return;
+
+    const selectedProfile = currentProfile;
 
     submittingRef.current = true;
     setIsSubmitting(true);
     setError("");
+
+    // Show feedback immediately
+    showFeedback(feedbackType, selectedProfile.name);
 
     try {
       const response = await fetch(`${API_URL}/swipe`, {
@@ -85,7 +91,7 @@ function Discover() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          profileId: currentProfile._id,
+          profileId: selectedProfile._id,
           action,
         }),
       });
@@ -96,11 +102,9 @@ function Discover() {
         throw new Error(data.message || "Unable to process swipe");
       }
 
-      showFeedback(action, currentProfile.name);
-
-      // Remove swiped profile from the current feed
+      // Remove swiped profile from feed
       setProfiles((prev) =>
-        prev.filter((profile) => profile._id !== currentProfile._id)
+        prev.filter((profile) => profile._id !== selectedProfile._id)
       );
 
       setDragX(0);
@@ -112,6 +116,7 @@ function Discover() {
       }
     } catch (err) {
       setError(err.message);
+      setLastAction(null);
       setDragX(0);
       dragXRef.current = 0;
     } finally {
@@ -121,10 +126,11 @@ function Discover() {
   };
 
   const handleLike = () => submitSwipe("like");
+
   const handlePass = () => submitSwipe("pass");
 
   // Super Like currently works as a normal Like
-  const handleSuperLike = () => submitSwipe("like");
+  const handleSuperLike = () => submitSwipe("like", "superLike");
 
   // Drag gesture handlers
   const handlePointerDown = (e) => {
@@ -133,6 +139,7 @@ function Discover() {
     startX.current = e.clientX;
     dragXRef.current = 0;
     setIsDragging(true);
+
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
@@ -183,6 +190,7 @@ function Discover() {
           <h1 className="text-3xl font-bold text-gray-800 sm:text-4xl">
             Discover People
           </h1>
+
           <p className="mt-2 text-sm text-gray-500 sm:text-base">
             Find someone who shares your interests.
           </p>
@@ -192,6 +200,7 @@ function Discover() {
         {loading && (
           <div className="flex min-h-[450px] flex-col items-center justify-center">
             <div className="h-12 w-12 animate-spin rounded-full border-4 border-pink-200 border-t-pink-500" />
+
             <p className="mt-4 text-sm text-gray-500">
               Finding people for you...
             </p>
@@ -202,6 +211,7 @@ function Discover() {
         {!loading && error && (
           <div className="mx-auto max-w-md rounded-2xl border border-red-200 bg-white p-6 text-center shadow-sm">
             <p className="font-semibold text-red-500">{error}</p>
+
             <button
               onClick={fetchProfiles}
               className="mt-5 inline-flex items-center gap-2 rounded-full bg-pink-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-pink-600"
@@ -215,16 +225,16 @@ function Discover() {
         {/* Profile Card */}
         {!loading && !error && currentProfile && (
           <div className="flex flex-col items-center">
-
             <div
-              className={`relative w-full max-w-[420px] ${isDragging ? "cursor-grabbing" : "cursor-grab"
-                }`}
+              className={`relative w-full max-w-[420px] ${
+                isDragging ? "cursor-grabbing" : "cursor-grab"
+              }`}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerCancel}
               style={{
-                touchAction: "none",
+                touchAction: "pan-y",
                 userSelect: "none",
                 WebkitUserSelect: "none",
               }}
@@ -246,7 +256,9 @@ function Discover() {
                 className="transition-transform duration-200 ease-out"
                 style={{
                   transform: `translateX(${dragX}px) rotate(${dragX * 0.04}deg)`,
-                  transition: isDragging ? "none" : "transform 0.3s ease",
+                  transition: isDragging
+                    ? "none"
+                    : "transform 0.3s ease",
                 }}
               >
                 <Profile
@@ -257,26 +269,6 @@ function Discover() {
                 />
               </div>
             </div>
-
-            {/* Swipe Feedback */}
-            {lastAction && (
-              <div
-                className={`mt-5 flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold shadow-sm ${lastAction.type === "like"
-                    ? "bg-pink-100 text-pink-600"
-                    : "bg-gray-100 text-gray-600"
-                  }`}
-              >
-                {lastAction.type === "like" ? (
-                  <Heart size={18} fill="currentColor" />
-                ) : (
-                  <X size={18} />
-                )}
-
-                {lastAction.type === "like"
-                  ? `You liked ${lastAction.name}`
-                  : `You passed ${lastAction.name}`}
-              </div>
-            )}
 
             {isSubmitting && (
               <p className="mt-3 text-xs text-gray-400">
@@ -313,11 +305,39 @@ function Discover() {
         )}
       </div>
 
+      {/* Swipe Feedback Toast */}
+      {!loading && lastAction && (
+        <div
+          role="status"
+          className={`fixed bottom-6 left-1/2 z-[60] flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center justify-center gap-2 rounded-full px-5 py-3 text-center text-sm font-semibold shadow-lg ${
+            lastAction.type === "like"
+              ? "bg-pink-100 text-pink-600"
+              : lastAction.type === "superLike"
+                ? "bg-blue-100 text-blue-600"
+                : "bg-gray-100 text-gray-600"
+          }`}
+        >
+          {lastAction.type === "pass" ? (
+            <X size={18} />
+          ) : (
+            <Heart size={18} fill="currentColor" />
+          )}
+
+          {lastAction.type === "like" &&
+            `You liked ${lastAction.name}`}
+
+          {lastAction.type === "pass" &&
+            `You passed ${lastAction.name}`}
+
+          {lastAction.type === "superLike" &&
+            `You super liked ${lastAction.name}`}
+        </div>
+      )}
+
       {/* Match Popup */}
       {matchedProfile && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
           <div className="relative w-full max-w-sm overflow-hidden rounded-3xl bg-white p-7 text-center shadow-2xl">
-
             <button
               onClick={closeMatchPopup}
               className="absolute right-4 top-4 rounded-full p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
@@ -326,7 +346,11 @@ function Discover() {
             </button>
 
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-pink-100">
-              <Heart size={32} fill="currentColor" className="text-pink-500" />
+              <Heart
+                size={32}
+                fill="currentColor"
+                className="text-pink-500"
+              />
             </div>
 
             <h2 className="text-3xl font-bold text-pink-500">

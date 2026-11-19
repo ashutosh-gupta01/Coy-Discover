@@ -10,7 +10,7 @@ const navLinks = [
 
 function Navbar() {
   return (
-    <nav className="sticky top-0 z-50 bg-white px-4 py-3 shadow-sm sm:px-8 sm:py-4">
+    <nav className="relative z-10 bg-white px-4 py-3 shadow-sm sm:px-8 sm:py-4">
       <div className="mx-auto flex max-w-7xl items-center justify-between">
         {/* Logo */}
         <h1 className="text-2xl font-bold text-pink-500">
