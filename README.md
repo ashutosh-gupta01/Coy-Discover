@@ -4,7 +4,7 @@ A full-stack dating discovery application built using the MERN stack. Coy allows
 
 ## 🚀 Live Demo
 
-- **Frontend:** [Add Your Live Frontend URL]
+- **Frontend:** https://coy-discover-frontend-emdd.onrender.com
 - **Backend API:** https://coy-discover-backend-5bms.onrender.com
 - **GitHub Repository:** https://github.com/ashutosh-gupta01/Coy-Discover
 
@@ -136,7 +136,7 @@ The project is deployed using Render.
 
 ## 👨‍💻 Developer
 
-**Aashutosh Gupta**
+**Aashutosh Kumar Gupta**
 
 - GitHub: https://github.com/ashutosh-gupta01
 - LinkedIn: https://linkedin.com/in/aashutosh-kumar-gupta-0561ab265/
